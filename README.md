@@ -1,25 +1,21 @@
 # Simulasi latihan ujian (versi web)
 
-Isi aplikasi disimpan terenkripsi (`site/konten.enc`, AES-256-GCM). Halaman `site/index.html` meminta kode akses,
+Isi aplikasi disimpan terenkripsi (`docs/konten.enc`, AES-256-GCM). Halaman `docs/index.html` meminta kode akses,
 lalu membuka isi aplikasi di browser. Tanpa kode yang benar, isi aplikasi tidak dapat dibaca.
 
 ## Mengelola kode akses
 
-Kode akses disimpan sebagai *secret* GitHub bernama `KODE_AKSES` (satu kode per baris, huruf besar/kecil dianggap sama).
-
-1. Buka **Settings → Secrets and variables → Actions** di repository ini.
-2. Pada `KODE_AKSES` klik ikon pensil (**Update**), ubah daftar kodenya, lalu **Update secret**.
-3. Buka tab **Actions → Pasang ke web → Run workflow → Run workflow**. Setelah sekitar 1 menit kode baru berlaku.
-
-Kode yang dihapus dari daftar tidak bisa lagi dipakai untuk masuk. Jangan ubah atau hapus secret `KUNCI_UTAMA`.
+Pemilik memakai alat "Kelola Kode Akses" (file HTML pribadi, tidak disimpan di repository ini):
+tulis daftar kode, klik tombol, lalu unggah `kunci.json` hasilnya ke folder `docs/`.
+`kunci.json` hanya berisi kunci yang dibungkus per kode; kodenya sendiri tidak tersimpan.
 
 ## Memperbarui isi aplikasi
 
 ```
 node tools/enkripsi-konten.mjs <aplikasi.html> <kunci-utama.txt> [firebase-config.json]
-git add site/konten.enc && git commit -m "Perbarui isi" && git push
+git add docs/konten.enc && git commit -m "Perbarui isi" && git push
 ```
-Setiap push ke `main` otomatis memasang ulang web lewat GitHub Actions.
+Web dipasang dengan GitHub Pages dari folder `docs/` di branch `main`.
 
 ## Catatan keamanan
 

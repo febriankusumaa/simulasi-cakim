@@ -18,5 +18,5 @@ if (fileFirebase) {
 const k = await c.subtle.importKey('raw', kunci, 'AES-GCM', false, ['encrypt']);
 const iv = c.getRandomValues(new Uint8Array(12));
 const isi = new Uint8Array(await c.subtle.encrypt({ name: 'AES-GCM', iv }, k, Buffer.from(html, 'utf8')));
-writeFileSync(new URL('../site/konten.enc', import.meta.url), Buffer.concat([iv, isi]));
+writeFileSync(new URL('../docs/konten.enc', import.meta.url), Buffer.concat([iv, isi]));
 console.log('site/konten.enc diperbarui dari', masukan, fileFirebase ? '(dengan tampilan online)' : '');

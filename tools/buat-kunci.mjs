@@ -1,4 +1,4 @@
-// Dijalankan oleh GitHub Actions. Membuat site/kunci.json dari secret:
+// Membuat docs/kunci.json dari variabel lingkungan:
 //   KODE_AKSES  : daftar kode akses, satu kode per baris (huruf besar/kecil dianggap sama)
 //   KUNCI_UTAMA : kunci utama (base64, 32 byte) yang dipakai mengenkripsi konten.enc
 // File kunci.json hanya berisi kunci utama yang dibungkus per kode; kodenya sendiri tidak tersimpan.
@@ -19,5 +19,5 @@ for (const k of kode) {
   daftar.push({ iv: b64(iv), c: b64(new Uint8Array(await c.subtle.encrypt({ name: 'AES-GCM', iv }, kk, utama))) });
 }
 daftar.sort(() => Math.random() - 0.5);
-writeFileSync(new URL('../site/kunci.json', import.meta.url), JSON.stringify({ versi: process.env.GITHUB_SHA || String(Date.now()), salt: b64(salt), iter: ITER, daftar }));
+writeFileSync(new URL('../docs/kunci.json', import.meta.url), JSON.stringify({ versi: process.env.GITHUB_SHA || String(Date.now()), salt: b64(salt), iter: ITER, daftar }));
 console.log(`kunci.json dibuat untuk ${kode.length} kode akses.`);

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kelola Kode Akses</title>
+<style>
+:root{--bg:#f4f1ea;--card:#fff;--ink:#1f2a24;--muted:#5c6a62;--line:#d9d4c7;--acc:#1e5b44}
+@media (prefers-color-scheme:dark){:root{--bg:#141a17;--card:#1d2420;--ink:#e7ece9;--muted:#9fb0a7;--line:#2f3a34;--acc:#4fae86}}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:16px}
+.c{max-width:620px;margin:20px auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+h1{font-size:1.3rem;margin:0 0 6px}p,li{color:var(--muted)}textarea{width:100%;box-sizing:border-box;min-height:160px;padding:10px;font:15px ui-monospace,monospace;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--ink)}
+button{margin-top:12px;padding:11px 18px;font-weight:600;font-size:1rem;border:0;border-radius:9px;background:var(--acc);color:#fff;cursor:pointer}
+.warn{background:#fff4d6;color:#6b4b00;border-radius:9px;padding:10px 12px;font-size:.92rem}@media (prefers-color-scheme:dark){.warn{background:#3a2f12;color:#f3d58a}}
+a{color:var(--acc)}#hasil{margin-top:14px;font-weight:600}
+</style></head><body><div class="c">
+<h1>Kelola Kode Akses</h1>
+<p>Tulis semua kode yang boleh masuk, <b>satu kode per baris</b>. Kode yang tidak ada di daftar ini tidak bisa lagi dipakai masuk. Huruf besar dan kecil dianggap sama.</p>
+<div class="warn">File ini berisi kunci rahasia aplikasi. Simpan untuk Anda sendiri, jangan dibagikan atau diunggah ke GitHub.</div>
+<p><label for="k"><b>Daftar kode akses</b></label></p>
+<textarea id="k">__KODE_SEKARANG__</textarea>
+<button id="b">1. Buat file kunci.json</button>
+<div id="hasil"></div>
+<ol>
+<li>Klik tombol di atas. File <b>kunci.json</b> akan terunduh.</li>
+<li>Buka <a href="https://github.com/__REPO__/upload/main/docs" target="_blank" rel="noopener">halaman unggah GitHub</a>, seret file <b>kunci.json</b> ke sana, lalu klik <b>Commit changes</b>.</li>
+<li>Tunggu sekitar 1 sampai 2 menit. Kode baru langsung berlaku di web.</li>
+</ol>
+</div>
+<script>
+const KUNCI_UTAMA = '__KUNCI_UTAMA__', ITER = 250000;
+const b64 = u => btoa(String.fromCharCode(...new Uint8Array(u)));
+const ub = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+document.getElementById('b').onclick = async () => {
+  const h = document.getElementById('hasil');
+  const kode = [...new Set(document.getElementById('k').value.split(/[\r\n,;]+/).map(s => s.trim().toUpperCase()).filter(Boolean))];
+  if (!kode.length) { h.textContent = 'Isi minimal satu kode.'; return; }
+  h.textContent = 'Membuat…';
+  const salt = crypto.getRandomValues(new Uint8Array(16)), daftar = [];
+  for (const k of kode) {
+    const bahan = await crypto.subtle.importKey('raw', new TextEncoder().encode(k), 'PBKDF2', false, ['deriveKey']);
+    const kk = await crypto.subtle.deriveKey({name:'PBKDF2', salt, iterations:ITER, hash:'SHA-256'}, bahan, {name:'AES-GCM', length:256}, false, ['encrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    daftar.push({iv: b64(iv), c: b64(await crypto.subtle.encrypt({name:'AES-GCM', iv}, kk, ub(KUNCI_UTAMA)))});
+  }
+  daftar.sort(() => Math.random() - 0.5);
+  const json = JSON.stringify({versi: String(Date.now()), salt: b64(salt), iter: ITER, daftar});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], {type:'application/json'})); a.download = 'kunci.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  h.textContent = 'Selesai: kunci.json untuk ' + kode.length + ' kode sudah diunduh. Lanjutkan ke langkah 2.';
+};
+</script></body></html>
