@@ -1,0 +1,61 @@
+<!-- Tampilan pengguna online (disisipkan otomatis oleh tools/enkripsi-konten.mjs) -->
+<style>
+#onl{position:fixed;left:14px;bottom:14px;z-index:99999;font:13px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#onl .pill{display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;border:1px solid #cfd6e4;background:#fff;color:#1b2a4a;font-weight:600;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,.12)}
+#onl .dot{width:9px;height:9px;border-radius:50%;background:#9aa3b2}
+#onl.on .dot{background:#1f9d55;box-shadow:0 0 0 3px rgba(31,157,85,.18)}
+#onl .pan{position:absolute;left:0;bottom:44px;width:250px;max-height:340px;overflow:auto;background:#fff;color:#1b2a4a;border:1px solid #cfd6e4;border-radius:12px;padding:12px;box-shadow:0 8px 28px rgba(0,0,0,.18)}
+#onl .pan[hidden]{display:none}
+#onl h4{margin:0 0 8px;font-size:13px}
+#onl ul{list-style:none;margin:0 0 10px;padding:0}
+#onl li{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid #eef1f6}
+#onl li .dot{background:#1f9d55}
+#onl li.me{font-weight:700}
+#onl .nm{display:flex;gap:6px}
+#onl input{flex:1;min-width:0;padding:6px 8px;border:1px solid #cfd6e4;border-radius:7px;font:inherit}
+#onl button.s{padding:6px 10px;border:0;border-radius:7px;background:#1b2a4a;color:#fff;font:inherit;cursor:pointer}
+#onl .ket{color:#6b7488;font-size:11.5px;margin-top:6px}
+@media print{#onl{display:none!important}}
+</style>
+<div id="onl"><div class="pan" hidden><h4>Sedang online</h4><ul></ul><div class="nm"><input maxlength="30" placeholder="Nama panggilan Anda"><button class="s">Simpan</button></div><div class="ket">Hanya nama panggilan ini yang terlihat oleh peserta lain.</div></div><div class="pill" role="button" tabindex="0"><span class="dot"></span><span class="jml">Menghubungkan…</span></div></div>
+<script type="module">
+const CFG = __FIREBASE_CONFIG__;
+const V = '10.12.2', G = 'https://www.gstatic.com/firebasejs/' + V + '/';
+const box = document.getElementById('onl'), pan = box.querySelector('.pan'), ul = box.querySelector('ul'),
+      jml = box.querySelector('.jml'), inp = box.querySelector('input'), sim = box.querySelector('button.s');
+const KN = 'online-nama-panggilan';
+const getN = () => { try { return localStorage.getItem(KN) || ''; } catch(e) { return ''; } };
+const setN = v => { try { localStorage.setItem(KN, v); } catch(e) {} };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+box.querySelector('.pill').addEventListener('click', () => { pan.hidden = !pan.hidden; if (!pan.hidden && !getN()) inp.focus(); });
+inp.value = getN();
+try {
+  const [{ initializeApp }, A, D] = await Promise.all([import(G + 'firebase-app.js'), import(G + 'firebase-auth.js'), import(G + 'firebase-database.js')]);
+  const app = initializeApp(CFG), auth = A.getAuth(app), db = D.getDatabase(app);
+  const cred = await A.signInAnonymously(auth), uid = cred.user.uid;
+  const me = D.ref(db, 'online/' + uid);
+  const nama = () => (getN() || 'Peserta ' + uid.slice(0, 4).toUpperCase()).slice(0, 30);
+  const tulis = () => D.set(me, { nama: nama(), t: D.serverTimestamp() }).catch(() => {});
+  D.onValue(D.ref(db, '.info/connected'), s => {
+    box.classList.toggle('on', !!s.val());
+    if (s.val()) D.onDisconnect(me).remove().then(tulis);
+  });
+  setInterval(tulis, 60000);
+  sim.addEventListener('click', () => { const v = inp.value.trim().slice(0, 30); if (v) { setN(v); tulis(); } });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') sim.click(); });
+  let offset = 0; D.onValue(D.ref(db, '.info/serverTimeOffset'), s => offset = s.val() || 0);
+  let data = {};
+  const tampil = () => {
+    const now = Date.now() + offset;
+    const list = Object.entries(data).filter(([, v]) => v && typeof v.t === 'number' && now - v.t < 180000)
+      .sort((a, b) => (a[0] === uid ? -1 : b[0] === uid ? 1 : String(a[1].nama).localeCompare(String(b[1].nama))));
+    jml.textContent = list.length + ' online';
+    ul.innerHTML = list.map(([k, v]) => '<li' + (k === uid ? ' class="me"' : '') + '><span class="dot"></span>' + esc(v.nama) + (k === uid ? ' (Anda)' : '') + '</li>').join('');
+  };
+  D.onValue(D.ref(db, 'online'), s => { data = s.val() || {}; tampil(); });
+  setInterval(tampil, 30000);
+} catch (e) {
+  jml.textContent = 'Status online tidak tersedia';
+  console.warn('online:', e);
+}
+</script>
